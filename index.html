@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TuProfe20 Lab - Aventuras con Fracciones</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        
+        body { margin: 0; padding: 0; background-color: #1e1b4b; overflow-x: hidden; }
+        .font-fun { font-family: 'Nunito', sans-serif; }
+        
+        @keyframes floatUp { 0% { transform: translateY(100vh) rotate(0deg); } 100% { transform: translateY(-100vh) rotate(360deg); } }
+        @keyframes slideInRight { 0% { opacity: 0; transform: translateX(30px); } 100% { opacity: 1; transform: translateX(0); } }
+        
+        @keyframes confettiExplosion { 
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; } 
+            80% { opacity: 1; } 
+            100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(var(--rot)); opacity: 0; } 
+        }
+        
+        @keyframes starRadialExplosion {
+            0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; filter: brightness(1) drop-shadow(0 0 5px rgba(251,191,36,0.8)); }
+            20% { transform: translate(calc(var(--tx) * 0.2), calc(var(--ty) * 0.2)) scale(var(--s)) rotate(calc(var(--rot) * 0.2)); opacity: 1; filter: brightness(1.5) drop-shadow(0 0 15px rgba(251,191,36,1)); }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(var(--rot)); opacity: 0; filter: brightness(1) drop-shadow(0 0 0 rgba(251,191,36,0)); }
+        }
+
+        @keyframes jellyPop {
+            0% { transform: scale3d(.3, .3, .3); opacity: 0; }
+            20% { transform: scale3d(1.1, 1.1, 1.1); }
+            40% { transform: scale3d(.9, .9, .9); }
+            60% { transform: scale3d(1.03, 1.03, 1.03); opacity: 1; }
+            80% { transform: scale3d(.97, .97, .97); }
+            100% { transform: scale3d(1, 1, 1); opacity: 1; }
+        }
+
+        @keyframes wiggle { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg) scale(1.1); } }
+        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 50% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } }
+        
+        @keyframes robotFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes robotThinkTilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(8deg) translateY(-4px); } }
+        @keyframes robotJump { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-20px); } }
+        @keyframes robotTalkArmL { 0%, 100% { transform: rotate(45deg); } 50% { transform: rotate(90deg); } }
+        @keyframes robotTalkArmR { 0%, 100% { transform: rotate(-45deg); } 50% { transform: rotate(-90deg); } }
+        @keyframes pointsShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        .animate-floatUp { animation: floatUp linear infinite; }
+        .animate-slideInRight { animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-confettiExplosion { animation: confettiExplosion 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-starRadialExplosion { animation: starRadialExplosion 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-jellyPop { animation: jellyPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-wiggle { animation: wiggle 1.5s ease-in-out infinite; }
+        .animate-pulseGlow { animation: pulseGlow 2s infinite; }
+        .animate-robotFloat { animation: robotFloat 3s ease-in-out infinite; }
+        .animate-robotThinkTilt { animation: robotThinkTilt 2s ease-in-out infinite; }
+        .animate-robotJump { animation: robotJump 1s cubic-bezier(0.28, 0.84, 0.42, 1) infinite; }
+        .animate-robotTalkArmL { animation: robotTalkArmL 0.6s ease-in-out infinite; }
+        .animate-robotTalkArmR { animation: robotTalkArmR 0.6s ease-in-out infinite 0.1s; }
+        .animate-pointsShake { animation: pointsShake 0.4s ease-in-out; }
+        
+        .chunky-btn { transition: all 0.1s; }
+        .chunky-btn:active:not(:disabled) { transform: translateY(6px); border-bottom-width: 0px !important; margin-top: 6px; }
+        .chunky-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(100%); }
+
+        /* Estilos para ocultar flechas de inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, memo, Fragment } = React;
+
+        const Icon = ({ paths, className = "", size = 24, fill="none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{__html: paths}} />
+        );
+        const Icons = {
+            Volume2: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' />,
+            VolumeX: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/>' />,
+            ArrowRight: (p) => <Icon {...p} paths='<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>' />,
+            Star: (p) => <Icon {...p} fill="currentColor" paths='<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' />,
+            Lock: (p) => <Icon {...p} paths='<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' />,
+            Check: (p) => <Icon {...p} paths='<polyline points="20 6 9 17 4 12"/>' />,
+            Map: (p) => <Icon {...p} paths='<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/>' />
+        };
+
+        const AudioController = {
+            ctx: null, muted: false,
+            init: function() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) this.ctx = new AudioContext();
+            },
+            play: function(type) {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                const now = this.ctx.currentTime;
+                
+                if (type === 'pop') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(450, now); osc.frequency.exponentialRampToValueAtTime(700, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'pop-reverse') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                } else if (type === 'success') {
+                    osc.disconnect();
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                        o.type = 'triangle'; o.frequency.value = freq;
+                        o.connect(g); g.connect(this.ctx.destination);
+                        const startTime = now + (i * 0.08);
+                        g.gain.setValueAtTime(0, startTime); g.gain.linearRampToValueAtTime(0.2, startTime + 0.05); g.gain.linearRampToValueAtTime(0, startTime + 0.4);
+                        o.start(startTime); o.stop(startTime + 0.4);
+                    });
+                } else if (type === 'swoosh') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                }
+            },
+            toggleMute: function() { this.muted = !this.muted; return this.muted; }
+        };
+
+        const FloatingBackground = memo(() => {
+            const symbols = ['1/2', '+', '3/4', '−', '=', '✨', '5/6', '🚀', '🧠', '⭐'];
+            const elements = Array.from({ length: 25 }).map((_, i) => ({
+                id: i, symbol: symbols[Math.floor(Math.random() * symbols.length)], left: `${Math.random() * 100}%`,
+                animationDuration: `${10 + Math.random() * 15}s`, animationDelay: `-${Math.random() * 20}s`,
+                fontSize: `${1.5 + Math.random() * 2}rem`, opacity: 0.1 + Math.random() * 0.2
+            }));
+            return (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {elements.map((el) => (
+                        <div key={el.id} className="absolute text-white font-black animate-floatUp select-none drop-shadow-lg" style={{ left: el.left, bottom: '-15%', fontSize: el.fontSize, opacity: el.opacity, animationDuration: el.animationDuration, animationDelay: el.animationDelay }}>
+                            {el.symbol}
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+
+        const Confetti = memo(() => {
+            const colors = ['#fde047', '#60a5fa', '#f472b6', '#34d399', '#a78bfa', '#ff5722'];
+            const pieces = Array.from({ length: 150 }).map((_, i) => ({
+                id: i, left: `${50 + (Math.random() * 20 - 10)}%`, color: colors[Math.floor(Math.random() * colors.length)],
+                tx: `${(Math.random() - 0.5) * 1000}px`, ty: `${(Math.random() - 1) * 1000}px`, rot: `${Math.random() * 720}deg`, delay: `${Math.random() * 0.2}s`
+            }));
+            return (
+                <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center overflow-hidden">
+                    {pieces.map((p) => (
+                        <div key={p.id} className="absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full animate-confettiExplosion shadow-sm" style={{ backgroundColor: p.color, '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay, left: p.left, top: '50%' }} />
+                    ))}
+                </div>
+            );
+        });
+
+        const GoldenStarsExplosion = memo(() => {
+            const stars = Array.from({ length: 45 }).map((_, i) => {
+                const angle = Math.random() * Math.PI * 2; const distance = 100 + Math.random() * 300; const size = 1.5 + Math.random() * 4;
+                return { id: i, tx: `${Math.cos(angle) * distance}px`, ty: `${Math.sin(angle) * distance}px`, rot: `${Math.random() * 360 + 360}deg`, delay: `${Math.random() * 0.2}s`, size: `${size}rem`, sScale: 0.8 + Math.random() * 0.5 };
+            });
+            return (
+                <div className="absolute inset-0 pointer-events-none z-[60] flex items-center justify-center overflow-visible">
+                    {stars.map((s) => (
+                        <div key={s.id} className="absolute animate-starRadialExplosion" style={{ '--tx': s.tx, '--ty': s.ty, '--rot': s.rot, '--s': s.sScale, animationDelay: s.delay, width: s.size, height: s.size }}>
+                            <Icons.Star className="w-full h-full text-yellow-300 drop-shadow-[0_0_15px_rgba(251,191,36,1)]" fill="currentColor" />
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+
+        const RobotAssistant = ({ status, isTalking }) => {
+            const getContainerAnim = () => { if (status === 'thinking' || status === 'error') return 'animate-robotThinkTilt'; if (status === 'happy') return 'animate-robotJump'; return 'animate-robotFloat'; };
+            const getArmLAnim = () => { if (status === 'thinking' || status === 'error') return 'rotate-[135deg]'; if (status === 'happy') return 'rotate-[150deg] animate-pulse'; if (isTalking) return 'animate-robotTalkArmL'; return 'rotate-45'; };
+            const getArmRAnim = () => { if (status === 'thinking' || status === 'error') return '-rotate-45'; if (status === 'happy') return '-rotate-[150deg] animate-pulse'; if (isTalking) return 'animate-robotTalkArmR'; return '-rotate-45'; };
+            
+            const getEyes = () => {
+                if (status === 'thinking' || status === 'error') return <div className="w-full flex justify-between px-2"><div className="w-3 h-1.5 bg-amber-500 rounded-full mt-1.5 rotate-[20deg]"></div><div className="w-3 h-1.5 bg-amber-500 rounded-full mt-1.5 -rotate-[20deg]"></div></div>; 
+                if (status === 'happy') return <div className="w-full flex justify-between px-1.5"><div className="w-4 h-2 bg-emerald-400 rounded-t-full mt-1"></div><div className="w-4 h-2 bg-emerald-400 rounded-t-full mt-1"></div></div>; 
+                return <div className="w-full flex justify-between px-1.5"><div className="w-4 h-4 bg-cyan-400 rounded-full animate-bounce"></div><div className="w-4 h-4 bg-cyan-400 rounded-full animate-bounce"></div></div>; 
+            };
+            const getMouth = () => {
+                if (status === 'thinking') return <div className="w-2.5 h-2.5 bg-slate-700 rounded-full mt-2 translate-x-2"></div>; 
+                if (status === 'error') return <div className="w-4 h-2 bg-slate-700 rounded-t-full mt-2"></div>;
+                if (status === 'happy') return <div className="w-7 h-5 bg-rose-400 rounded-b-full mt-1.5"></div>; 
+                if (isTalking) return <div className="w-4 h-5 bg-slate-700 rounded-full mt-1 animate-ping"></div>; 
+                return <div className="w-5 h-1.5 bg-slate-700 rounded-full mt-2"></div>; 
+            };
+
+            return (
+                <div className={`relative flex flex-col items-center drop-shadow-lg ${getContainerAnim()} cursor-pointer hover:scale-110 transition-transform`}>
+                    <div className="relative z-0 flex flex-col items-center translate-y-1">
+                        <div className={`w-4 h-4 rounded-full shadow-[0_0_12px_currentColor] z-10 transition-colors duration-300 ${status === 'happy' ? 'text-emerald-400 bg-emerald-400' : status === 'error' ? 'text-amber-500 bg-amber-500 animate-ping' : 'text-cyan-400 bg-cyan-400 animate-pulse'}`}></div>
+                        <div className="w-1.5 h-5 bg-slate-400"></div>
+                    </div>
+                    <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-slate-100 to-slate-300 rounded-[1.8rem] border-[4px] border-slate-400 shadow-xl flex flex-col items-center justify-center p-2 transition-transform duration-300">
+                        <div className="w-full h-full bg-slate-800 rounded-xl flex flex-col items-center justify-center p-1.5 shadow-inner border-2 border-slate-600 transition-all">
+                            {getEyes()} {getMouth()}
+                        </div>
+                    </div>
+                    <div className={`absolute top-1/2 -left-3 w-4 h-6 bg-slate-300 border-[4px] border-slate-400 rounded-full z-0 origin-top transition-transform duration-300 ${getArmLAnim()}`}></div>
+                    <div className={`absolute top-1/2 -right-3 w-4 h-6 bg-slate-300 border-[4px] border-slate-400 rounded-full z-0 origin-top transition-transform duration-300 ${getArmRAnim()}`}></div>
+                </div>
+            );
+        };
+
+        const MISSIONS = [
+            {
+                id: 1,
+                title: 'MISIÓN 1: Construimos el jardín',
+                problem: 'El Sr. Barco está colocando rocas alrededor de su jardín. A lo ancho, colocó dos rocas, una al lado de la otra. Una mide 1/2 metro de largo y la otra 2/3 de metro. ¿Cuánto mide el ancho del jardín?',
+                operationType: 'add',
+                fractions: [{n: 1, d: 2}, {n: 2, d: 3}],
+                targetDenominator: 6,
+                convertedFractions: [{n: 3, d: 6}, {n: 4, d: 6}],
+                answer: {n: 7, d: 6},
+                mixedAnswer: {whole: 1, n: 1, d: 6},
+                hints: {
+                    op: "Si tenemos dos partes y queremos saber el total, ¿debemos juntar o comparar?",
+                    conv: "Para sumarlas, necesitamos partes del mismo tamaño. ¿Por qué número debes multiplicar arriba y abajo para que ambas tengan denominador 6?",
+                    solve: "Ya tienen el mismo denominador. ¡Solo suma los numeradores superiores!",
+                    decomp: "Tienes 7 sextos. Si cada 6 sextos forman 1 entero completo, separa 6/6 y fíjate cuánto sobra."
+                }
+            },
+            {
+                id: 2,
+                title: 'MISIÓN 2: El camino a la escuela',
+                problem: 'Brenda vive a 7/8 km de la escuela. Andrea vive a 3/4 km. ¿Cuánto más lejos vive Brenda de la escuela que Andrea?',
+                operationType: 'subtract',
+                fractions: [{n: 7, d: 8}, {n: 3, d: 4}],
+                targetDenominator: 8,
+                convertedFractions: [{n: 7, d: 8}, {n: 6, d: 8}],
+                answer: {n: 1, d: 8},
+                hints: {
+                    op: "Buscamos la diferencia entre dos distancias para saber quién está más lejos. ¿Qué operación es?",
+                    conv: "Para compararlas, divide los cuartos para que sean octavos multiplicando numerador y denominador por el mismo número.",
+                    solve: "Ahora que ambas distancias se miden en octavos, solo resta los numeradores superiores."
+                }
+            },
+            {
+                id: 3,
+                title: 'MISIÓN 3: Regamos las plantas',
+                problem: 'Esta mañana, se usó 2/3 litros de agua para regar el jardín y 5/6 litros para las plantas. ¿Cuánta agua se utilizó en total?',
+                operationType: 'add',
+                fractions: [{n: 2, d: 3}, {n: 5, d: 6}],
+                targetDenominator: 6,
+                convertedFractions: [{n: 4, d: 6}, {n: 5, d: 6}],
+                answer: {n: 9, d: 6},
+                mixedAnswer: {whole: 1, n: 3, d: 6, simplified: {whole: 1, n: 1, d: 2}},
+                hints: {
+                    op: "Si juntamos el agua de ambos usos para saber el total, ¿qué operación hacemos?",
+                    conv: "Transforma los tercios a sextos. Recuerda: lo que multiplicas abajo, ¡también lo multiplicas arriba!",
+                    solve: "Suma los sextos. Recuerda mantener el mismo tamaño de piezas (el denominador 6).",
+                    decomp: "Tienes 9 sextos. Cada 6 forman un litro entero. Separa 6/6 más lo que te sobra."
+                }
+            },
+            {
+                id: 4,
+                title: 'MISIÓN 4: Completamos la tira',
+                problem: 'Claudia modeló 5/6. Puso 1/4 de tira debajo del modelo de 5/6. ¿Qué espacio falta para que ambas líneas midan igual?',
+                operationType: 'subtract',
+                fractions: [{n: 5, d: 6}, {n: 1, d: 4}],
+                targetDenominator: 12,
+                convertedFractions: [{n: 10, d: 12}, {n: 3, d: 12}],
+                answer: {n: 7, d: 12},
+                hints: {
+                    op: "Buscamos el espacio que falta entre dos medidas. Eso significa hallar una diferencia.",
+                    conv: "Busca un denominador común. ¿Qué número está en la tabla del 6 y del 4? ¡El 12! Multiplica para llegar a 12.",
+                    solve: "Transformaste todo a doceavos. Ahora haz la resta de los numeradores."
+                }
+            }
+        ];
+
+        function App() {
+            const [gameState, setGameState] = useState('start'); // start, map, mission, report
+            const [studentName, setStudentName] = useState('');
+            
+            // Progress & Scoring
+            const [highestUnlocked, setHighestUnlocked] = useState(0); 
+            const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
+            const [totalScore, setTotalScore] = useState(0);
+            const [currentMissionScore, setCurrentMissionScore] = useState(100);
+            const [missionResults, setMissionResults] = useState([]);
+            const [startTime, setStartTime] = useState(null);
+            
+            // UI Animations
+            const [isMuted, setIsMuted] = useState(false);
+            const [pointsLossAnim, setPointsLossAnim] = useState(false);
+            const [profiState, setProfiState] = useState({ status: 'normal', message: "" });
+            
+            // Mission State
+            const [missionStep, setMissionStep] = useState(0); // 0:op, 1:convert, 2:solve, 3:merge_anim, 4:decompose, 5:success
+            const [isConvertingAnim, setIsConvertingAnim] = useState(false);
+            const [isMergingAnim, setIsMergingAnim] = useState(false);
+            
+            const [inputs, setInputs] = useState({
+                op: '', m1N: '', m1D: '', conv1N: '', m2N: '', m2D: '', conv2N: '', 
+                ansN: '', ansD: '', decompMult: '', decompRem: '', mixW: '', mixN: '', mixD: ''
+            });
+
+            const currentMission = MISSIONS[currentMissionIndex];
+
+            const handleInteraction = () => AudioController.init();
+            const toggleMute = () => { handleInteraction(); setIsMuted(AudioController.toggleMute()); };
+
+            const speakProfi = (msg, status = 'talking') => {
+                setProfiState({ status, message: msg });
+                if (status === 'talking' || status === 'happy') {
+                    setTimeout(() => setProfiState(prev => ({...prev, status: 'normal'})), 4000);
+                }
+            };
+
+            const handleMistake = (hintMsg) => {
+                AudioController.play('pop-reverse');
+                speakProfi(hintMsg, 'error');
+                
+                setCurrentMissionScore(prev => {
+                    const newScore = Math.max(0, prev - 10);
+                    if (prev !== newScore) {
+                        setPointsLossAnim(true);
+                        setTimeout(() => setPointsLossAnim(false), 400);
+                    }
+                    return newScore;
+                });
+            };
+
+            const resetMissionState = () => {
+                setMissionStep(0); setIsConvertingAnim(false); setIsMergingAnim(false); setPointsLossAnim(false);
+                setInputs({ op: '', m1N: '', m1D: '', conv1N: '', m2N: '', m2D: '', conv2N: '', ansN: '', ansD: '', decompMult: '', decompRem: '', mixW: '', mixN: '', mixD: '' });
+            };
+
+            const handleStart = (e) => {
+                e.preventDefault();
+                handleInteraction();
+                if (studentName.trim().length > 0) {
+                    AudioController.play('swoosh');
+                    setStartTime(Date.now());
+                    setGameState('map');
+                }
+            };
+
+            const startMission = (index) => {
+                handleInteraction();
+                AudioController.play('swoosh');
+                setCurrentMissionIndex(index);
+                setCurrentMissionScore(100);
+                resetMissionState();
+                setGameState('mission');
+                speakProfi(`¡Misión ${index + 1}! Lee atentamente el problema de arriba.`, 'happy');
+            };
+
+            const checkOperation = () => {
+                handleInteraction();
+                if (inputs.op === currentMission.operationType) {
+                    AudioController.play('success');
+                    setMissionStep(1);
+                    speakProfi("¡Correcto! Ahora necesitamos que las partes sean iguales. Multiplica arriba y abajo por el MISMO número.", 'happy');
+                } else {
+                    handleMistake(currentMission.hints.op);
+                }
+            };
+
+            const checkConversion = () => {
+                handleInteraction();
+                const m1 = currentMission.targetDenominator / currentMission.fractions[0].d;
+                const m2 = currentMission.targetDenominator / currentMission.fractions[1].d;
+                
+                // Allow empty inputs for fractions that don't need converting (like 7/8 in Mission 2)
+                const i_m1N = inputs.m1N === '' ? 1 : parseInt(inputs.m1N); 
+                const i_m1D = inputs.m1D === '' ? 1 : parseInt(inputs.m1D);
+                const i_m2N = inputs.m2N === '' ? 1 : parseInt(inputs.m2N); 
+                const i_m2D = inputs.m2D === '' ? 1 : parseInt(inputs.m2D);
+                
+                if (i_m1N !== i_m1D || i_m2N !== i_m2D) {
+                    handleMistake("¡Alto ahí! Para no cambiar la cantidad real, debes multiplicar Numerador y Denominador por el MISMO número."); 
+                    return;
+                }
+                if (i_m1D !== m1 || i_m2D !== m2) {
+                    handleMistake(`Revisa tus multiplicadores. ¿Por qué número debes multiplicar para llegar al denominador ${currentMission.targetDenominator}?`); 
+                    return;
+                }
+                
+                const isN1Correct = parseInt(inputs.conv1N) === currentMission.convertedFractions[0].n;
+                const isN2Correct = parseInt(inputs.conv2N) === currentMission.convertedFractions[1].n;
+                
+                if (!isN1Correct || !isN2Correct) {
+                    handleMistake("Los multiplicadores están bien, pero el nuevo numerador es incorrecto. ¡Revisa la multiplicación!"); 
+                    return;
+                }
+
+                AudioController.play('success');
+                setIsConvertingAnim(true);
+                speakProfi("¡Magia Pura! Observa cómo los bloques se subdividen en partes más pequeñas conservando su tamaño total.", 'happy');
+                
+                setTimeout(() => {
+                    setMissionStep(2);
+                    setIsConvertingAnim(false);
+                    speakProfi("¡Perfecto! Ahora que ambas tienen el mismo denominador, ya puedes resolver la operación.", 'happy');
+                }, 3000); 
+            };
+
+            const checkFinalAnswer = () => {
+                handleInteraction();
+                const n = parseInt(inputs.ansN); 
+                const d = parseInt(inputs.ansD);
+                
+                if (n === currentMission.answer.n && d === currentMission.answer.d) {
+                    AudioController.play('success');
+                    if (currentMission.mixedAnswer) {
+                        setMissionStep(3); 
+                        setIsMergingAnim(true);
+                        speakProfi("¡Genial! Al sumar hemos superado el entero. Mira cómo se agrupan las partes automáticamente.", 'happy');
+                        setTimeout(() => { 
+                            setMissionStep(4); 
+                            setIsMergingAnim(false); 
+                            speakProfi("Ahora descompón la fracción matemáticamente para hallar los enteros.", 'normal');
+                        }, 3500);
+                    } else {
+                        finishMission();
+                    }
+                } else {
+                    handleMistake(currentMission.hints.solve);
+                }
+            };
+
+            const checkDecomposition = () => {
+                handleInteraction();
+                const targetD = currentMission.targetDenominator; 
+                const ansN = currentMission.answer.n;
+                const expectedMult = Math.floor(ansN / targetD) * targetD; 
+                const expectedRem = ansN % targetD; 
+                const expectedW = Math.floor(ansN / targetD);
+                
+                const pMult = parseInt(inputs.decompMult); const pRem = parseInt(inputs.decompRem);
+                const pW = parseInt(inputs.mixW); const pN = parseInt(inputs.mixN); const pD = parseInt(inputs.mixD);
+
+                if (pMult !== expectedMult || pRem !== expectedRem) {
+                    handleMistake(currentMission.hints.decomp); return;
+                }
+                if (pW !== expectedW || pD !== targetD) {
+                    handleMistake(`¿Cuántos enteros formaste en total? El denominador (el tamaño de la pieza) se mantiene en ${targetD}.`); return;
+                }
+
+                let fracCorrect = false;
+                if (pN === expectedRem && pD === targetD) fracCorrect = true;
+                if (currentMission.mixedAnswer.simplified && pN === currentMission.mixedAnswer.simplified.n && pD === currentMission.mixedAnswer.simplified.d) fracCorrect = true;
+
+                if (!fracCorrect) {
+                    handleMistake(`Revisa el numerador de la fracción restante que te sobró.`); return;
+                }
+
+                AudioController.play('success');
+                finishMission(); 
+            };
+
+            const finishMission = () => {
+                setTotalScore(prev => prev + currentMissionScore);
+                setMissionResults(prev => {
+                    const newRes = [...prev];
+                    newRes[currentMissionIndex] = currentMissionScore;
+                    return newRes;
+                });
+                
+                speakProfi(`¡Misión superada! Has rescatado ${currentMissionScore} puntos de energía.`, 'happy');
+                setMissionStep(5); 
+                
+                setTimeout(() => {
+                    if (currentMissionIndex === MISSIONS.length - 1) {
+                        setGameState('report'); 
+                        AudioController.play('success');
+                    } else {
+                        if (highestUnlocked === currentMissionIndex) {
+                            setHighestUnlocked(prev => prev + 1);
+                        }
+                        setGameState('map');
+                    }
+                }, 4000);
+            };
+
+            const Fraction = ({ n, d, color = "text-slate-800", highlight = false }) => (
+                <div className={`inline-flex flex-col items-center mx-1 font-black text-2xl sm:text-4xl ${color} ${highlight ? 'animate-jellyPop' : ''}`}>
+                    <span className="border-b-[4px] sm:border-b-[5px] border-current px-2 leading-none pb-1">{n}</span>
+                    <span className="px-2 leading-none pt-1">{d}</span>
+                </div>
+            );
+
+            const InputFraction = ({ nVal, dVal, onNChange, onDChange, readOnlyD = null }) => (
+                <div className="inline-flex items-center mx-1 animate-jellyPop">
+                    <div className="inline-flex flex-col items-center">
+                        <input type="number" className="w-14 h-14 sm:w-20 sm:h-20 text-center border-[4px] border-slate-300 rounded-2xl mb-1 text-2xl sm:text-4xl font-black focus:border-amber-400 focus:bg-amber-50 outline-none text-indigo-700 transition-all shadow-inner" 
+                               value={nVal} onChange={e => onNChange(e.target.value)} placeholder="?" />
+                        <div className="w-full h-1.5 sm:h-2 bg-slate-800 rounded-full my-1"></div>
+                        {readOnlyD !== null ? (
+                            <span className="h-14 sm:h-20 flex items-center font-black text-3xl sm:text-5xl text-slate-800">{readOnlyD}</span>
+                        ) : (
+                            <input type="number" className="w-14 h-14 sm:w-20 sm:h-20 text-center border-[4px] border-slate-300 rounded-2xl mt-1 text-2xl sm:text-4xl font-black focus:border-amber-400 focus:bg-amber-50 outline-none text-indigo-700 transition-all shadow-inner" 
+                                   value={dVal} onChange={e => onDChange(e.target.value)} placeholder="?" />
+                        )}
+                    </div>
+                </div>
+            );
+
+            const ConversionForm = ({ origN, origD, targetD, mN, mD, cN, onMnChange, onMdChange, onCnChange }) => {
+                const isAlreadyConverted = origD === targetD;
+                if (isAlreadyConverted) {
+                    return (
+                        <div className="flex flex-col items-center justify-center opacity-70 p-4 bg-slate-100 rounded-2xl border-4 border-slate-200">
+                            <Fraction n={origN} d={origD} />
+                            <span className="text-sm sm:text-base font-bold text-slate-500 mt-2 text-center uppercase tracking-widest">Ya está listo</span>
+                        </div>
+                    );
+                }
+                return (
+                    <div className="flex flex-col xl:flex-row items-center gap-2 sm:gap-4 bg-white p-4 sm:p-6 rounded-[2rem] border-[4px] border-slate-200 shadow-sm animate-jellyPop w-full xl:w-auto justify-center">
+                        <div className="inline-flex flex-col items-center">
+                             <div className="flex items-center gap-2">
+                                 <span className="text-3xl sm:text-5xl font-black text-slate-800">{origN}</span>
+                                 <span className="text-2xl sm:text-3xl text-amber-500 font-black">×</span>
+                                 <input type="number" className="w-14 h-14 sm:w-16 sm:h-16 text-center border-[4px] border-amber-300 rounded-xl text-2xl sm:text-3xl font-black focus:border-amber-500 focus:bg-amber-50 outline-none text-indigo-700 shadow-inner" value={mN} onChange={e => onMnChange(e.target.value)} placeholder="?" />
+                             </div>
+                             <div className="w-full h-1.5 sm:h-2 bg-slate-800 rounded-full my-2"></div>
+                             <div className="flex items-center gap-2">
+                                 <span className="text-3xl sm:text-5xl font-black text-slate-800">{origD}</span>
+                                 <span className="text-2xl sm:text-3xl text-amber-500 font-black">×</span>
+                                 <input type="number" className="w-14 h-14 sm:w-16 sm:h-16 text-center border-[4px] border-amber-300 rounded-xl text-2xl sm:text-3xl font-black focus:border-amber-500 focus:bg-amber-50 outline-none text-indigo-700 shadow-inner" value={mD} onChange={e => onMdChange(e.target.value)} placeholder="?" />
+                             </div>
+                        </div>
+                        <span className="text-4xl sm:text-6xl font-black text-slate-300 rotate-90 xl:rotate-0 my-3 xl:my-0">=</span>
+                        <InputFraction nVal={cN} onNChange={onCnChange} readOnlyD={targetD} />
+                    </div>
+                );
+            };
+
+            const renderFractionBar = (fraction, targetD, colorFrom, colorTo, borderColor, isSource = true) => {
+                const isConverted = missionStep >= 2 || isConvertingAnim;
+                const multiplier = targetD / fraction.d;
+                const shouldFadeOut = isSource && (missionStep >= 3 || isMergingAnim);
+                
+                return (
+                    <div className={`h-14 sm:h-20 rounded-xl flex shadow-lg border-[4px] sm:border-[5px] ${borderColor} w-full overflow-hidden bg-slate-200 relative transition-all duration-1000`}>
+                        {Array.from({length: fraction.d}).map((_, origIdx) => {
+                            const isFilled = origIdx < fraction.n;
+                            return (
+                                <div key={origIdx} className={`flex-1 flex border-r-[4px] sm:border-r-[5px] ${borderColor} last:border-r-0 relative z-10`}>
+                                    <div className={`absolute inset-0 bg-gradient-to-r ${colorFrom} ${colorTo} transition-opacity duration-1000 ease-in-out ${isFilled && !shouldFadeOut ? 'opacity-100' : 'opacity-0'}`}></div>
+                                    <div className="absolute inset-0 flex">
+                                        {Array.from({length: multiplier}).map((_, subIdx) => (
+                                            <div key={subIdx} className={`flex-1 border-r-[3px] sm:border-r-[4px] border-white/80 last:border-r-0 transition-all duration-1000 ease-in-out origin-top ${isConverted ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0'}`}></div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            const renderMergedBars = () => {
+                const { convertedFractions, targetDenominator } = currentMission;
+                const totalPieces = convertedFractions[0].n + convertedFractions[1].n;
+                const numWholes = Math.ceil(totalPieces / targetDenominator);
+                const shouldFadeIn = missionStep >= 3 || isMergingAnim;
+
+                return (
+                    <div className="w-full flex flex-col items-center gap-4 mt-10 pt-8 border-t-[5px] border-dashed border-slate-300 relative">
+                        <div className="absolute -top-6 bg-white px-6 py-1.5 text-slate-500 font-black rounded-full border-[4px] border-slate-200 shadow-sm text-sm sm:text-base uppercase tracking-widest z-20">ZONA DE ENTEROS</div>
+                        <div className="flex gap-4 sm:gap-10 justify-center w-full flex-wrap">
+                            {Array.from({length: numWholes}).map((_, wIdx) => (
+                                <div key={`whole-${wIdx}`} className="flex flex-col items-center w-[45%] max-w-[240px] min-w-[160px]">
+                                    <div className="h-16 sm:h-24 rounded-2xl flex shadow-lg border-[4px] sm:border-[6px] border-amber-400 w-full overflow-hidden bg-slate-200 relative">
+                                        {Array.from({length: targetDenominator}).map((_, sIdx) => {
+                                            const globalPieceIdx = (wIdx * targetDenominator) + sIdx;
+                                            let colorClasses = '';
+                                            if (globalPieceIdx < convertedFractions[0].n) colorClasses = 'from-blue-400 to-indigo-500'; 
+                                            else if (globalPieceIdx < totalPieces) colorClasses = 'from-emerald-400 to-teal-500'; 
+                                            const hasPiece = globalPieceIdx < totalPieces;
+
+                                            return (
+                                                <div key={`slot-${sIdx}`} className={`flex-1 border-r-[3px] sm:border-r-[4px] border-white/80 last:border-r-0 relative z-10 bg-slate-200`}>
+                                                    {hasPiece && (
+                                                        <div className={`absolute inset-0 bg-gradient-to-r ${colorClasses} transition-opacity duration-1000 delay-700 ease-in-out ${shouldFadeIn ? 'opacity-100' : 'opacity-0'}`}></div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {shouldFadeIn && (
+                                        <div className="mt-4 bg-amber-100 text-amber-700 font-black px-5 py-2 rounded-full border-[3px] border-amber-300 animate-slideInRight shadow-sm text-sm sm:text-base whitespace-nowrap">
+                                            {wIdx < Math.floor(totalPieces/targetDenominator) ? '1 Entero Completo' : 'Fracción Sobrante'}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderVisualization = () => {
+                const { fractions, convertedFractions, targetDenominator } = currentMission;
+                const isConverted = missionStep >= 2 || isConvertingAnim;
+                const showMerged = (missionStep >= 3 || isMergingAnim) && currentMission.operationType === 'add';
+                
+                return (
+                    <div className="w-full bg-slate-50 p-6 sm:p-10 rounded-[2.5rem] shadow-inner mb-6 flex flex-col items-center justify-center border-[5px] border-slate-200 relative overflow-hidden min-h-[250px]">
+                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#475569_3px,transparent_3px)] [background-size:24px_24px]"></div>
+                        <div className="flex gap-4 sm:gap-16 items-center relative z-10 w-full justify-center">
+                            <div className="flex flex-col items-center w-[40%] max-w-[220px]">
+                                {renderFractionBar(fractions[0], targetDenominator, 'from-blue-400', 'to-indigo-500', 'border-indigo-700', true)}
+                                <div className="mt-4 bg-white px-4 py-2 rounded-2xl shadow-md border-2 border-slate-200 transition-all">
+                                    <Fraction n={isConverted ? convertedFractions[0].n : fractions[0].n} d={isConverted ? targetDenominator : fractions[0].d} color="text-indigo-700" highlight={isConvertingAnim} />
+                                </div>
+                            </div>
+                            <div className="text-5xl sm:text-7xl font-black text-slate-400 drop-shadow-md pb-12">
+                                {missionStep > 0 ? (currentMission.operationType === 'add' ? '+' : '−') : '?'}
+                            </div>
+                            <div className="flex flex-col items-center w-[40%] max-w-[220px]">
+                                {renderFractionBar(fractions[1], targetDenominator, 'from-emerald-400', 'to-teal-500', 'border-teal-700', true)}
+                                <div className="mt-4 bg-white px-4 py-2 rounded-2xl shadow-md border-2 border-slate-200 transition-all">
+                                    <Fraction n={isConverted ? convertedFractions[1].n : fractions[1].n} d={isConverted ? targetDenominator : fractions[1].d} color="text-teal-700" highlight={isConvertingAnim} />
+                                </div>
+                            </div>
+                        </div>
+                        {showMerged && renderMergedBars()}
+                    </div>
+                );
+            };
+
+            if (gameState === 'start') {
+                return (
+                    <div className="min-h-[100dvh] bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#1e1b4b] flex flex-col items-center justify-center p-4 sm:p-8 relative font-fun overflow-hidden">
+                        <FloatingBackground />
+                        
+                        <div className="relative z-10 bg-white/10 backdrop-blur-xl p-8 sm:p-14 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-[4px] border-white/20 max-w-xl w-full text-center">
+                            <div className="mb-6 flex justify-center">
+                                <div className="transform scale-150 mb-10"><RobotAssistant status="happy" isTalking={false}/></div>
+                            </div>
+                            <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border-2 border-amber-400/50 bg-amber-500/20 text-amber-300 font-black tracking-widest uppercase mb-6 shadow-lg animate-pulse">TuProfe20 Lab</div>
+                            <h1 className="text-5xl sm:text-6xl font-black text-white mb-10 drop-shadow-lg leading-tight">
+                                Aventuras con <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300 filter contrast-125">Fracciones</span>
+                            </h1>
+                            <form onSubmit={handleStart} className="flex flex-col gap-5">
+                                <input type="text" className="w-full p-5 border-[5px] border-slate-200 rounded-2xl text-center text-2xl sm:text-3xl font-bold focus:outline-none focus:border-amber-400 focus:bg-amber-50 transition-all text-slate-700 placeholder-slate-400 shadow-inner" placeholder="Escribe tu nombre..." value={studentName} onChange={e => setStudentName(e.target.value)} required />
+                                <button type="submit" className="chunky-btn w-full bg-gradient-to-r from-amber-500 to-orange-500 border-b-[8px] border-orange-700 text-white font-black py-5 px-6 rounded-2xl text-2xl sm:text-3xl shadow-xl flex items-center justify-center gap-3">
+                                    ¡Comenzar! <Icons.ArrowRight className="w-8 h-8 sm:w-10 sm:h-10 stroke-[3px]" />
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'map') {
+                return (
+                    <div className="min-h-[100dvh] bg-gradient-to-br from-[#1e1b4b] via-[#4f46e5] to-[#7c3aed] flex flex-col items-center p-4 sm:p-8 relative font-fun overflow-hidden">
+                        <FloatingBackground />
+                        
+                        <div className="w-full max-w-6xl flex flex-wrap justify-between items-center mb-8 gap-4 relative z-10">
+                            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-[1.5rem] border-2 border-white/20 text-white shadow-lg flex-1 min-w-[200px]">
+                                <span className="text-lg font-bold opacity-80 uppercase tracking-widest block text-xs mb-1">Explorador</span> 
+                                <span className="text-2xl sm:text-3xl font-black">{studentName}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 backdrop-blur-md px-6 py-3 rounded-[1.5rem] border-[3px] border-yellow-300 text-white font-black shadow-lg">
+                                    <Icons.Star className="w-8 h-8 text-yellow-200 fill-current animate-pulse" />
+                                    <span className="text-3xl sm:text-4xl">{totalScore}</span>
+                                </div>
+                                <button onClick={toggleMute} className="p-4 rounded-[1.5rem] bg-white/20 border-2 border-white/40 backdrop-blur-md text-white hover:bg-white/30 transition-all shadow-md active:scale-95">
+                                    {isMuted ? <Icons.VolumeX className="w-8 h-8"/> : <Icons.Volume2 className="w-8 h-8"/>}
+                                </button>
+                            </div>
+                        </div>
+
+                        <h1 className="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-amber-400 to-orange-500 mb-12 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-10 text-center flex items-center justify-center gap-4">
+                            <Icons.Map className="w-12 h-12 text-yellow-300" /> Mapa de Misiones
+                        </h1>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-5xl relative z-10">
+                            {MISSIONS.map((m, idx) => {
+                                const isLocked = idx > highestUnlocked;
+                                const isCompleted = idx < highestUnlocked;
+                                const isCurrent = idx === highestUnlocked;
+                                
+                                return (
+                                    <button 
+                                        key={m.id} 
+                                        onClick={() => !isLocked && startMission(idx)}
+                                        disabled={isLocked}
+                                        className={`chunky-btn relative p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center h-56 border-b-[10px] transition-all
+                                            ${isLocked ? 'bg-slate-300 border-slate-400 opacity-90 grayscale' : 
+                                              isCompleted ? 'bg-gradient-to-br from-emerald-400 to-teal-500 border-teal-700 hover:brightness-110 shadow-[0_15px_30px_rgba(16,185,129,0.3)]' : 
+                                              'bg-gradient-to-br from-indigo-500 to-purple-600 border-purple-800 hover:brightness-110 shadow-[0_15px_40px_rgba(79,70,229,0.5)] animate-pulseGlow'
+                                            }`}
+                                    >
+                                        {isLocked && <Icons.Lock className="absolute top-6 right-6 w-10 h-10 text-slate-500 opacity-50" />}
+                                        {isCompleted && <Icons.Check className="absolute top-6 right-6 w-12 h-12 text-white drop-shadow-md" />}
+                                        {isCurrent && <Icons.Star className="absolute top-6 right-6 w-10 h-10 text-yellow-300 fill-current animate-pulse" />}
+                                        
+                                        <div className="bg-black/20 text-white px-5 py-1.5 rounded-full text-sm font-black uppercase tracking-widest mb-4">Nivel {m.id}</div>
+                                        <h2 className={`text-3xl font-black leading-tight ${isLocked ? 'text-slate-500' : 'text-white drop-shadow-md'}`}>{m.title.split(': ')[1]}</h2>
+                                        {isCompleted && (
+                                            <div className="mt-4 bg-white/20 px-4 py-1.5 rounded-xl text-white font-bold text-lg flex items-center gap-2 border border-white/30">
+                                                <Icons.Star className="w-5 h-5 fill-current text-yellow-300"/> {missionResults[idx] || 0} pts
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'report') {
+                const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(timeSpent / 60); const seconds = timeSpent % 60;
+                const isPerfect = totalScore === 400;
+
+                return (
+                    <div className="min-h-[100dvh] bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#1e1b4b] flex flex-col items-center justify-center p-4 sm:p-8 relative font-fun overflow-hidden">
+                        <Confetti />
+                        {isPerfect && <GoldenStarsExplosion />}
+
+                        <div className="relative z-10 bg-white p-8 sm:p-14 rounded-[3.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.6)] border-[8px] border-white max-w-3xl w-full flex flex-col items-center">
+                            
+                            <div className="w-32 h-32 mb-6"><RobotAssistant status="happy" isTalking={false}/></div>
+                            
+                            {isPerfect && (
+                                <div className="bg-gradient-to-r from-yellow-300 to-amber-500 text-white font-black px-8 py-3 rounded-full mb-6 text-2xl sm:text-3xl uppercase tracking-widest shadow-xl animate-bounce border-4 border-yellow-100 flex items-center gap-3">
+                                    <Icons.Star className="w-8 h-8 fill-current" /> ¡Puntaje Perfecto! <Icons.Star className="w-8 h-8 fill-current" />
+                                </div>
+                            )}
+
+                            <h1 className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] mb-10 text-center drop-shadow-sm">Reporte de Aventura</h1>
+                            
+                            <div className="grid grid-cols-2 gap-4 sm:gap-8 w-full mb-10">
+                                <div className="bg-indigo-50 border-[4px] border-indigo-200 p-5 rounded-3xl flex flex-col items-center text-center">
+                                    <span className="text-indigo-400 font-black uppercase tracking-widest text-sm mb-1">Explorador</span> 
+                                    <span className="text-2xl sm:text-3xl font-black text-indigo-700">{studentName}</span>
+                                </div>
+                                <div className="bg-amber-50 border-[4px] border-amber-300 p-5 rounded-3xl flex flex-col items-center text-center shadow-inner relative overflow-hidden">
+                                    {isPerfect && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50 -translate-x-full animate-[slideInRight_2s_infinite]"></div>}
+                                    <span className="text-amber-600 font-black uppercase tracking-widest text-sm mb-1 z-10">Puntaje Total</span> 
+                                    <span className="text-3xl sm:text-5xl font-black text-amber-500 flex items-center gap-2 z-10"><Icons.Star className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-yellow-400 drop-shadow-sm"/> {totalScore}</span>
+                                </div>
+                                <div className="bg-teal-50 border-[4px] border-teal-200 p-5 rounded-3xl flex flex-col items-center text-center">
+                                    <span className="text-teal-500 font-black uppercase tracking-widest text-sm mb-1">Tiempo</span> 
+                                    <span className="text-2xl sm:text-3xl font-black text-teal-700">{minutes}m {seconds}s</span>
+                                </div>
+                                <div className="bg-pink-50 border-[4px] border-pink-200 p-5 rounded-3xl flex flex-col items-center text-center">
+                                    <span className="text-pink-400 font-black uppercase tracking-widest text-sm mb-1">Misiones</span> 
+                                    <span className="text-2xl sm:text-3xl font-black text-pink-600">4 / 4 ¡Éxito!</span>
+                                </div>
+                            </div>
+
+                            <p className="text-center font-bold text-slate-600 mb-10 bg-slate-100 p-6 rounded-2xl border-l-8 border-emerald-400 text-lg sm:text-xl">
+                                "¡Recuerda! Para sumar o restar, necesitamos partes del mismo tamaño. Multiplicar arriba y abajo por el mismo número nos permite crear fracciones equivalentes."
+                            </p>
+
+                            <button onClick={() => window.location.reload()} className="chunky-btn w-full max-w-md bg-gradient-to-r from-emerald-400 to-teal-500 border-b-[8px] border-teal-700 text-white font-black py-5 px-6 rounded-2xl text-2xl shadow-xl flex items-center justify-center gap-3 hover:brightness-110">
+                                Jugar Otra Vez <Icons.Check className="w-8 h-8 stroke-[3px]" />
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // MISSION VIEW RENDERING
+            return (
+                <div className="min-h-[100dvh] bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#1e1b4b] flex flex-col font-fun relative overflow-hidden p-2 sm:p-4">
+                    <FloatingBackground />
+                    {missionStep === 5 && <Confetti />}
+
+                    <div className="shrink-0 relative z-20 w-full max-w-6xl mx-auto flex flex-wrap justify-between items-center mb-4 px-2 gap-4">
+                        <div className="bg-white/20 backdrop-blur-md text-white px-5 sm:px-8 py-2.5 sm:py-3.5 rounded-[1.5rem] border-2 border-white/40 font-black text-xl sm:text-3xl shadow-lg flex items-center gap-3">
+                            <div className="bg-white/20 px-3 py-1 rounded-xl text-sm uppercase tracking-widest hidden sm:block">Misión {currentMission.id}</div>
+                            {currentMission.title.split(': ')[1]}
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <div className={`flex items-center gap-2 backdrop-blur-md px-5 py-2.5 rounded-[1.5rem] border-[3px] text-white font-black shadow-lg transition-colors duration-300 ${pointsLossAnim ? 'bg-rose-500 border-rose-300 animate-pointsShake' : 'bg-gradient-to-r from-amber-500 to-orange-500 border-yellow-300'}`}>
+                                <Icons.Star className={`w-6 h-6 sm:w-8 sm:h-8 fill-current ${pointsLossAnim ? 'text-white' : 'text-yellow-200 animate-pulse'}`} />
+                                <div className="flex flex-col items-center leading-none">
+                                    <span className="text-2xl sm:text-4xl">{totalScore + currentMissionScore}</span>
+                                    <span className="text-[10px] sm:text-xs uppercase opacity-80 tracking-widest font-bold">Puntos</span>
+                                </div>
+                            </div>
+                            <button onClick={toggleMute} className="hidden sm:block p-4 rounded-[1.5rem] bg-white/20 border-2 border-white/40 backdrop-blur-md text-white hover:bg-white/30 transition-all shadow-md active:scale-95">
+                                {isMuted ? <Icons.VolumeX className="w-8 h-8"/> : <Icons.Volume2 className="w-8 h-8"/>}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 w-full max-w-6xl mx-auto bg-white rounded-[2.5rem] sm:rounded-[3.5rem] border-[8px] sm:border-[12px] border-white shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden relative z-10">
+                        <div className="bg-slate-50 p-6 sm:p-10 border-b-[6px] border-slate-200 flex items-center min-h-[120px]">
+                            <p className="text-2xl sm:text-4xl text-slate-700 font-bold leading-relaxed">{currentMission.problem}</p>
+                        </div>
+
+                        <div className="flex-1 p-4 sm:p-10 flex flex-col items-center justify-start bg-white overflow-y-auto">
+                            {renderVisualization()}
+
+                            <div className="w-full max-w-5xl pb-10">
+                                {missionStep === 0 && (
+                                    <div className="flex flex-col items-center animate-slideInRight w-full">
+                                        <h3 className="text-3xl font-black text-slate-800 mb-8 bg-amber-100 px-8 py-3 rounded-full border-[3px] border-amber-300 shadow-sm text-center">¿Qué operación debemos usar?</h3>
+                                        <div className="flex flex-col sm:flex-row w-full gap-6 justify-center">
+                                            <button onClick={() => { handleInteraction(); setInputs({...inputs, op: 'add'}) }}
+                                                    className={`w-full max-w-md py-6 sm:py-8 rounded-[2rem] font-black text-2xl sm:text-4xl border-[5px] border-b-[10px] transition-all flex flex-col items-center gap-3 ${inputs.op === 'add' ? 'bg-indigo-100 border-indigo-500 text-indigo-700 shadow-xl scale-105' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50'}`}>
+                                                <span className="text-5xl">+</span> Juntar (Sumar)
+                                            </button>
+                                            <button onClick={() => { handleInteraction(); setInputs({...inputs, op: 'subtract'}) }}
+                                                    className={`w-full max-w-md py-6 sm:py-8 rounded-[2rem] font-black text-2xl sm:text-4xl border-[5px] border-b-[10px] transition-all flex flex-col items-center gap-3 ${inputs.op === 'subtract' ? 'bg-pink-100 border-pink-500 text-pink-700 shadow-xl scale-105' : 'bg-white border-slate-200 text-slate-500 hover:border-pink-300 hover:bg-pink-50'}`}>
+                                                <span className="text-5xl">−</span> Comparar (Restar)
+                                            </button>
+                                        </div>
+                                        {inputs.op && (
+                                            <button onClick={checkOperation} className="chunky-btn mt-10 bg-emerald-400 border-b-[8px] border-emerald-600 text-white font-black py-5 px-16 rounded-2xl text-3xl shadow-xl animate-jellyPop">
+                                                Confirmar Acción
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {missionStep === 1 && (
+                                    <div className="flex flex-col items-center animate-slideInRight w-full">
+                                        <h3 className="text-2xl sm:text-4xl font-black text-slate-800 mb-6 text-center bg-amber-100 px-8 py-3 rounded-full border-[3px] border-amber-300 shadow-sm">¡Fracciones Equivalentes!</h3>
+                                        <p className="text-slate-600 font-bold mb-8 text-center max-w-2xl text-lg sm:text-2xl">
+                                            Multiplica arriba y abajo por el <span className="text-amber-600 uppercase tracking-widest font-black bg-amber-100 px-2 rounded border border-amber-300">mismo número</span> para que ambas fracciones tengan <span className="text-indigo-600 font-black">denominador {currentMission.targetDenominator}</span>.
+                                        </p>
+                                        
+                                        <div className="flex flex-col lg:flex-row justify-center items-center gap-6 sm:gap-8 bg-slate-50 p-6 sm:p-10 rounded-[3rem] border-[5px] border-slate-200 shadow-inner w-full">
+                                            <ConversionForm 
+                                                origN={currentMission.fractions[0].n} origD={currentMission.fractions[0].d} targetD={currentMission.targetDenominator}
+                                                mN={inputs.m1N} onMnChange={val => setInputs({...inputs, m1N: val})} mD={inputs.m1D} onMdChange={val => setInputs({...inputs, m1D: val})}
+                                                cN={inputs.conv1N} onCnChange={val => setInputs({...inputs, conv1N: val})}
+                                            />
+                                            <span className="text-6xl sm:text-8xl font-black text-slate-300 drop-shadow-sm">{currentMission.operationType === 'add' ? '+' : '−'}</span>
+                                            <ConversionForm 
+                                                origN={currentMission.fractions[1].n} origD={currentMission.fractions[1].d} targetD={currentMission.targetDenominator}
+                                                mN={inputs.m2N} onMnChange={val => setInputs({...inputs, m2N: val})} mD={inputs.m2D} onMdChange={val => setInputs({...inputs, m2D: val})}
+                                                cN={inputs.conv2N} onCnChange={val => setInputs({...inputs, conv2N: val})}
+                                            />
+                                        </div>
+                                        <button onClick={checkConversion} disabled={isConvertingAnim} className="chunky-btn mt-10 bg-indigo-500 border-b-[8px] border-indigo-700 text-white font-black py-5 px-16 rounded-2xl text-3xl shadow-xl disabled:opacity-50">
+                                            {isConvertingAnim ? 'Cortando piezas...' : 'Cortar Piezas'}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {missionStep >= 2 && missionStep <= 3 && (
+                                    <div className="flex flex-col items-center animate-slideInRight w-full">
+                                        <h3 className="text-3xl font-black text-slate-800 mb-8 bg-amber-100 px-8 py-3 rounded-full border-[3px] border-amber-300 shadow-sm text-center">¡Resuelve la operación final!</h3>
+                                        <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 mb-6 bg-slate-50 p-6 sm:p-10 rounded-[3rem] border-[5px] border-slate-200 shadow-inner w-full max-w-4xl">
+                                            <Fraction n={currentMission.convertedFractions[0].n} d={currentMission.targetDenominator} color="text-indigo-600" />
+                                            <span className="text-5xl sm:text-6xl font-black text-slate-400 mx-2">{currentMission.operationType === 'add' ? '+' : '−'}</span>
+                                            <Fraction n={currentMission.convertedFractions[1].n} d={currentMission.targetDenominator} color="text-teal-600"/>
+                                            <span className="text-5xl sm:text-6xl font-black text-rose-400 mx-4">=</span>
+                                            
+                                            {missionStep === 2 ? (
+                                                <InputFraction nVal={inputs.ansN} onNChange={val => setInputs({...inputs, ansN: val})} dVal={inputs.ansD} onDChange={val => setInputs({...inputs, ansD: val})} />
+                                            ) : (
+                                                <Fraction n={currentMission.answer.n} d={currentMission.answer.d} color="text-emerald-600" highlight={true} />
+                                            )}
+                                        </div>
+                                        {missionStep === 2 && (
+                                            <button onClick={checkFinalAnswer} className="chunky-btn mt-6 bg-gradient-to-r from-amber-500 to-orange-500 border-b-[8px] border-orange-700 text-white font-black py-5 px-16 rounded-2xl text-3xl shadow-xl w-full max-w-lg">
+                                                Comprobar Respuesta
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {missionStep === 4 && (
+                                    <div className="flex flex-col items-center animate-slideInRight w-full mt-6">
+                                        <h3 className="text-2xl sm:text-4xl font-black text-slate-800 mb-8 bg-amber-100 px-8 py-3 rounded-full border-[3px] border-amber-300 shadow-sm text-center">¡Descompón para formar enteros!</h3>
+                                        
+                                        <div className="flex flex-col xl:flex-row flex-wrap justify-center items-center gap-6 bg-slate-50 p-6 sm:p-10 rounded-[3rem] border-[5px] border-slate-200 shadow-inner w-full">
+                                            <Fraction n={currentMission.answer.n} d={currentMission.answer.d} color="text-slate-600" />
+                                            <span className="text-5xl sm:text-6xl font-black text-slate-400 mx-3">=</span>
+                                            
+                                            <div className="inline-flex flex-col items-center animate-jellyPop">
+                                               <div className="flex items-center gap-3">
+                                                   <input type="number" className="w-16 h-16 sm:w-24 sm:h-20 text-center border-[4px] border-blue-300 rounded-2xl text-2xl sm:text-4xl font-black focus:border-blue-500 focus:bg-blue-50 outline-none text-blue-700 shadow-inner" value={inputs.decompMult} onChange={e => setInputs({...inputs, decompMult: e.target.value})} placeholder="Múlt." />
+                                                   <span className="text-3xl sm:text-5xl font-black text-slate-400">+</span>
+                                                   <input type="number" className="w-16 h-16 sm:w-24 sm:h-20 text-center border-[4px] border-emerald-300 rounded-2xl text-2xl sm:text-4xl font-black focus:border-emerald-500 focus:bg-emerald-50 outline-none text-emerald-700 shadow-inner" value={inputs.decompRem} onChange={e => setInputs({...inputs, decompRem: e.target.value})} placeholder="Sobra" />
+                                               </div>
+                                               <div className="w-full h-1.5 sm:h-2 bg-slate-800 rounded-full my-2"></div>
+                                               <span className="h-10 flex items-center font-black text-3xl sm:text-5xl text-slate-800">{currentMission.targetDenominator}</span>
+                                            </div>
+
+                                            <span className="text-5xl sm:text-6xl font-black text-slate-400 mx-3">=</span>
+                                            
+                                            <div className="flex items-center animate-jellyPop bg-amber-100 p-4 sm:p-5 rounded-[2rem] border-[4px] border-amber-300 shadow-sm">
+                                                <input type="number" className="w-20 h-24 sm:w-28 sm:h-32 text-center border-[5px] border-amber-300 bg-white rounded-2xl mr-4 text-4xl sm:text-6xl font-black focus:border-amber-500 focus:bg-amber-50 outline-none text-amber-700 shadow-inner" value={inputs.mixW} onChange={e => setInputs({...inputs, mixW: e.target.value})} placeholder="Ent." />
+                                                <div className="inline-flex flex-col items-center">
+                                                    <input type="number" className="w-16 h-14 sm:w-20 sm:h-16 text-center border-[4px] border-slate-300 bg-white rounded-xl mb-1 text-2xl sm:text-3xl font-black focus:border-emerald-400 focus:bg-emerald-50 outline-none text-emerald-700 shadow-inner" value={inputs.mixN} onChange={e => setInputs({...inputs, mixN: e.target.value})} placeholder="?" />
+                                                    <div className="w-full h-1.5 sm:h-2 bg-slate-800 rounded-full my-1.5"></div>
+                                                    <input type="number" className="w-16 h-14 sm:w-20 sm:h-16 text-center border-[4px] border-slate-300 bg-white rounded-xl mt-1 text-2xl sm:text-3xl font-black focus:border-emerald-400 focus:bg-emerald-50 outline-none text-emerald-700 shadow-inner" value={inputs.mixD} onChange={e => setInputs({...inputs, mixD: e.target.value})} placeholder="?" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <p className="text-base sm:text-xl font-bold text-slate-500 my-6 text-center max-w-3xl">
+                                            Escribe en el numerador izquierdo el <span className="text-blue-500">múltiplo exacto</span> de {currentMission.targetDenominator} para formar los enteros, y a la derecha lo que te <span className="text-emerald-500">sobra</span>.
+                                        </p>
+                                        
+                                        <button onClick={checkDecomposition} className="chunky-btn mt-2 bg-gradient-to-r from-emerald-400 to-teal-500 border-b-[8px] border-teal-700 text-white font-black py-5 px-16 rounded-2xl text-3xl shadow-xl w-full max-w-lg">
+                                            ¡Formar Enteros!
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {missionStep === 5 && (
+                                     <div className="flex flex-col items-center animate-jellyPop w-full mt-10">
+                                         <div className="text-4xl sm:text-6xl font-black text-emerald-500 flex items-center justify-center gap-4 drop-shadow-md bg-emerald-100 px-10 py-6 rounded-full border-[5px] border-emerald-400 w-full text-center">
+                                             <Icons.Check className="w-12 h-12 sm:w-16 sm:h-16 stroke-[3px]" /> ¡Nivel Superado!
+                                         </div>
+                                     </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="shrink-0 w-full max-w-6xl mx-auto mt-6 flex items-end gap-6 z-20">
+                        <div className="shrink-0 drop-shadow-2xl">
+                           <RobotAssistant status={profiState.status} isTalking={profiState.status === 'talking'} />
+                        </div>
+                        <div className={`flex-1 p-6 sm:p-8 rounded-[2.5rem] rounded-bl-none border-[5px] shadow-2xl mb-8 relative transition-colors duration-300 ${profiState.status === 'error' ? 'bg-amber-50 border-amber-400' : 'bg-white border-slate-200'}`}>
+                            <div className={`absolute -left-[18px] bottom-0 w-6 h-6 border-b-[5px] border-l-[5px] rotate-45 transform translate-y-[8px] transition-colors duration-300 ${profiState.status === 'error' ? 'bg-amber-50 border-amber-400' : 'bg-white border-slate-200'}`}></div>
+                            <p className="text-xl sm:text-3xl font-bold text-slate-700 leading-snug">
+                                {profiState.message}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
